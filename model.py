@@ -211,3 +211,30 @@ class VAE(nn.Module):
         recon = self.decode(z)
         return recon, mu, logvar
 
+# Step 12 - vae_loss
+import torch
+import torch.nn.functional as F
+
+
+def kl_divergence(mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
+    # 0.5 * (exp(logvar) + mu^2 - 1 - logvar)
+    return 0.5 * torch.sum(logvar.exp() + mu.pow(2) - 1.0 - logvar, dim=-1).mean()
+
+
+def vae_loss(
+    recon: torch.Tensor,
+    x: torch.Tensor,
+    mu: torch.Tensor,
+    logvar: torch.Tensor,
+) -> torch.Tensor:
+    r"""Compute the total VAE loss: reconstruction loss + KL divergence.
+
+    Reconstruction loss is the Binary Cross Entropy summed over feature dimensions
+    per sample, then averaged over the batch.
+    """
+    batch_size = x.size(0)
+    # Sum across all pixels per sample, then average across the batch
+    bce = F.binary_cross_entropy(recon, x, reduction="sum") / batch_size
+    kl = kl_divergence(mu, logvar)
+    return bce + kl
+
