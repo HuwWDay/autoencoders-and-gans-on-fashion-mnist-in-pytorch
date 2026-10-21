@@ -66,3 +66,12 @@ def load_fashion_pixels(n_train: int = 5000, n_test: int = 1000) -> dict[str, to
         "y_test": y_test,
     }
 
+# Step 2 - pca_reconstruction_error
+def pca_reconstruction_error(X, n_components):
+    # TODO: SVD on centered X; reconstruct from the top components; per-entry MSE
+    Xc = X - X.mean(0)
+    _, _, Vt = np.linalg.svd(Xc, full_matrices=False)
+    V = Vt[:n_components].T 
+    recon = Xc @ V @ V.T 
+    return float(((Xc - recon) ** 2).mean())
+
