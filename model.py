@@ -75,3 +75,17 @@ def pca_reconstruction_error(X, n_components):
     recon = Xc @ V @ V.T 
     return float(((Xc - recon) ** 2).mean())
 
+# Step 3 - LinearAutoencoder
+class LinearAutoencoder(nn.Module):
+    def __init__(self, n_inputs=784, n_codings=30):
+        super().__init__()
+        # TODO
+        self.encoder = nn.Linear(n_inputs, n_codings)
+        self.decoder = nn.Linear(n_codings, n_inputs)
+
+    def encode(self, x):
+        return self.encoder(x)
+
+    def forward(self, x):
+        return self.decoder(self.encoder(x))
+
