@@ -157,3 +157,17 @@ def reconstruction_error(model: torch.nn.Module, X: torch.Tensor) -> float:
     model.train(was_training)
     return float(error)
 
+# Step 5 - StackedAutoencoder
+class StackedAutoencoder(nn.Module):
+    def __init__(self, n_inputs=784, hidden=100, n_codings=30):
+        super().__init__()
+        # TODO: encoder Sequential, decoder Sequential ending in Sigmoid
+        self.encoder = nn.Sequential(nn.Linear(n_inputs, hidden), nn.ReLU(), nn.Linear(hidden, n_codings))
+        self.decoder = nn.Sequential(nn.Linear(n_codings, hidden), nn.ReLU(), nn.Linear(hidden, n_inputs), nn.Sigmoid())
+
+    def encode(self, x):
+        return self.encoder(x)
+
+    def forward(self, x):
+        return self.decoder(self.encoder(x))
+
