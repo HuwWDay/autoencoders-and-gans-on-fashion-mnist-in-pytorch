@@ -89,3 +89,71 @@ class LinearAutoencoder(nn.Module):
     def forward(self, x):
         return self.decoder(self.encoder(x))
 
+# Step 4 - train_autoencoder
+import torch
+import torch.nn.functional as F
+
+
+def train_autoencoder(
+    model: torch.nn.Module,
+    X: torch.Tensor,
+    epochs: int = 5,
+    lr: float = 0.005,
+    batch_size: int = 64,
+    seed: int = 42,
+    noise_std: float = 0.0,
+) -> list[float]:
+    """Train an autoencoder to reconstruct X with optional Gaussian input noise.
+
+    Returns the list of mean MSE reconstruction losses for each epoch.
+    """
+    torch.manual_seed(seed)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+
+    n_samples = X.size(0)
+    device = next(model.parameters()).device
+    epoch_losses = []
+
+    model.train()
+    for _ in range(epochs):
+        perm = torch.randperm(n_samples)
+        batch_losses = []
+
+        for start_idx in range(0, n_samples, batch_size):
+            batch_indices = perm[start_idx : start_idx + batch_size]
+            target = X[batch_indices].to(device)
+
+            if noise_std > 0.0:
+                noise = torch.randn_like(target) * noise_std
+                inp = target + noise
+            else:
+                inp = target
+
+            optimizer.zero_grad()
+            recon = model(inp)
+            loss = F.mse_loss(recon, target)
+            loss.backward()
+            optimizer.step()
+
+            batch_losses.append(loss.item())
+
+        epoch_losses.append(sum(batch_losses) / len(batch_losses))
+
+    return epoch_losses
+
+
+def reconstruction_error(model: torch.nn.Module, X: torch.Tensor) -> float:
+    """Compute the MSE between model(X) and X in eval mode without gradients."""
+    was_training = model.training
+    model.eval()
+
+    device = next(model.parameters()).device
+    X_dev = X.to(device)
+
+    with torch.no_grad():
+        recon = model(X_dev)
+        error = F.mse_loss(recon, X_dev).item()
+
+    model.train(was_training)
+    return float(error)
+
