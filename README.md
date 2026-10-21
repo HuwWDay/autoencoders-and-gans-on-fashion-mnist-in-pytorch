@@ -15,6 +15,7 @@ python scaffold.py
 - [x] **3.** LinearAutoencoder
 - [x] **4.** train_autoencoder
 - [x] **5.** StackedAutoencoder
+- [x] **11.** VAE
 
 ---
 

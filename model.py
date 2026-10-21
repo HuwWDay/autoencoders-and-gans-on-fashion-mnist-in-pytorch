@@ -171,3 +171,43 @@ class StackedAutoencoder(nn.Module):
     def forward(self, x):
         return self.decoder(self.encoder(x))
 
+# Step 11 - VAE
+import torch
+import torch.nn as nn
+
+
+class VAE(nn.Module):
+    def __init__(self, n_inputs: int = 784, hidden: int = 100, n_codings: int = 10):
+        super().__init__()
+        self.n_codings = n_codings
+        self.hidden = nn.Sequential(
+            nn.Linear(n_inputs, hidden),
+            nn.ReLU(),
+        )
+        self.mu = nn.Linear(hidden, n_codings)
+        self.logvar = nn.Linear(hidden, n_codings)
+        self.decoder = nn.Sequential(
+            nn.Linear(n_codings, hidden),
+            nn.ReLU(),
+            nn.Linear(hidden, n_inputs),
+            nn.Sigmoid(),
+        )
+
+    def encode(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        h = self.hidden(x)
+        return self.mu(h), self.logvar(h)
+
+    def reparameterize(self, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
+        std = torch.exp(0.5 * logvar)
+        eps = torch.randn_like(std)
+        return mu + eps * std
+
+    def decode(self, z: torch.Tensor) -> torch.Tensor:
+        return self.decoder(z)
+
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        mu, logvar = self.encode(x)
+        z = self.reparameterize(mu, logvar)
+        recon = self.decode(z)
+        return recon, mu, logvar
+
