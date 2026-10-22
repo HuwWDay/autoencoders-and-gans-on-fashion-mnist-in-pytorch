@@ -17,6 +17,7 @@ python scaffold.py
 - [x] **5.** StackedAutoencoder
 - [x] **11.** VAE
 - [x] **12.** vae_loss
+- [x] **15.** Generator
 
 ---
 

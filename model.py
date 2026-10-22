@@ -238,3 +238,23 @@ def vae_loss(
     kl = kl_divergence(mu, logvar)
     return bce + kl
 
+# Step 15 - Generator
+class Generator(nn.Module):
+    def __init__(self, n_codings=30, hidden=100, n_outputs=784):
+        super().__init__()
+        self.n_codings = n_codings 
+        self.net = nn.Sequential(nn.Linear(n_codings, hidden), nn.ReLU(), nn.Linear(hidden, n_outputs), nn.Sigmoid())
+         
+    def forward(self, z):
+        return self.net(z)
+
+class Discriminator(nn.Module):
+    def __init__(self, n_inputs=784, hidden=100):
+        super().__init__()
+        # TODO
+        self.net = nn.Sequential(nn.Linear(n_inputs, hidden), nn.LeakyReLU(0.2), nn.Linear(hidden, 1))
+
+    def forward(self, x):
+        # TODO: logits (batch,)
+        return self.net(x).squeeze(-1)
+
