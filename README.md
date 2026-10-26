@@ -22,6 +22,7 @@ python scaffold.py
 - [x] **10.** codings_classifier
 - [x] **11.** VAE
 - [x] **12.** vae_loss
+- [x] **13.** train_vae
 - [x] **15.** Generator
 
 ---

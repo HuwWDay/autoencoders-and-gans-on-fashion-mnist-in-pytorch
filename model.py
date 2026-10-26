@@ -448,6 +448,52 @@ def vae_loss(
     kl = kl_divergence(mu, logvar)
     return bce + kl
 
+# Step 13 - train_vae
+import torch
+
+
+def train_vae(
+    model: torch.nn.Module,
+    X: torch.Tensor,
+    epochs: int = 10,
+    lr: float = 0.002,
+    batch_size: int = 64,
+    seed: int = 42,
+) -> list[float]:
+    """Train a Variational Autoencoder using Adam on vae_loss.
+
+    Returns the list of mean total VAE losses for each epoch.
+    """
+    torch.manual_seed(seed)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+
+    n_samples = X.size(0)
+    device = next(model.parameters()).device
+    epoch_losses = []
+
+    model.train()
+    for _ in range(epochs):
+        perm = torch.randperm(n_samples)
+        batch_losses = []
+
+        for start_idx in range(0, n_samples, batch_size):
+            batch_indices = perm[start_idx : start_idx + batch_size]
+            xb = X[batch_indices].to(device)
+
+            optimizer.zero_grad()
+
+            recon, mu, logvar = model(xb)
+            loss = vae_loss(recon, xb, mu, logvar)
+
+            loss.backward()
+            optimizer.step()
+
+            batch_losses.append(loss.item())
+
+        epoch_losses.append(sum(batch_losses) / len(batch_losses))
+
+    return epoch_losses
+
 # Step 15 - Generator
 class Generator(nn.Module):
     def __init__(self, n_codings=30, hidden=100, n_outputs=784):
