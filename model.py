@@ -207,6 +207,13 @@ class TiedAutoencoder(nn.Module):
         recon = torch.sigmoid(h_recon @ self.W1 + self.b4)
         return recon
 
+# Step 7 - denoising_gain
+def denoising_gain(model, X, noise_std=0.3, seed=0):
+    # TODO: mse(noisy, X) / mse(model(noisy), X)
+    torch.manual_seed(seed)
+    noisy = (X + noise_std*torch.randn_like(X)).clamp(0, 1)
+    return float(F.mse_loss(noisy, X) / F.mse_loss(model(noisy), X))
+
 # Step 11 - VAE
 import torch
 import torch.nn as nn
