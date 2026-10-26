@@ -214,6 +214,45 @@ def denoising_gain(model, X, noise_std=0.3, seed=0):
     noisy = (X + noise_std*torch.randn_like(X)).clamp(0, 1)
     return float(F.mse_loss(noisy, X) / F.mse_loss(model(noisy), X))
 
+# Step 8 - kl_sparsity_loss
+import torch
+import torch.nn as nn
+
+
+def kl_sparsity_loss(activations: torch.Tensor, target: float = 0.1) -> torch.Tensor:
+    """Compute the KL divergence between target sparsity and average hidden unit activations.
+
+    Formula:
+        KL(p_target || p) = sum_j [ target * log(target / p_j) + (1 - target) * log((1 - target) / (1 - p_j)) ]
+    where p_j is the batch mean activation of unit j clamped to [1e-6, 1 - 1e-6].
+    """
+    # Mean activation per hidden unit across the batch dimension
+    p = activations.mean(dim=0).clamp(1e-6, 1.0 - 1e-6)
+
+    t = torch.as_tensor(target, dtype=p.dtype, device=p.device)
+
+    loss_per_unit = t * torch.log(t / p) + (1.0 - t) * torch.log((1.0 - t) / (1.0 - p))
+    return loss_per_unit.sum()
+
+
+class SparseAutoencoder(nn.Module):
+    def __init__(self, n_inputs: int = 784, hidden: int = 300):
+        super().__init__()
+        self.encoder = nn.Sequential(
+            nn.Linear(n_inputs, hidden),
+            nn.Sigmoid(),
+        )
+        self.decoder = nn.Sequential(
+            nn.Linear(hidden, n_inputs),
+            nn.Sigmoid(),
+        )
+
+    def encode(self, x: torch.Tensor) -> torch.Tensor:
+        return self.encoder(x)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.decoder(self.encoder(x))
+
 # Step 11 - VAE
 import torch
 import torch.nn as nn
