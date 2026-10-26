@@ -19,6 +19,7 @@ python scaffold.py
 - [x] **7.** denoising_gain
 - [x] **8.** kl_sparsity_loss
 - [x] **9.** train_sparse
+- [x] **10.** codings_classifier
 - [x] **11.** VAE
 - [x] **12.** vae_loss
 - [x] **15.** Generator

@@ -322,6 +322,65 @@ def mean_activation(model: torch.nn.Module, X: torch.Tensor) -> float:
     model.train(was_training)
     return float(mean_val)
 
+# Step 10 - codings_classifier
+import torch
+import torch.nn as nn
+
+
+def codings_classifier(
+    autoencoder: nn.Module,
+    data: dict[str, torch.Tensor],
+    epochs: int = 20,
+    lr: float = 0.01,
+    seed: int = 42,
+) -> float:
+    """Train a linear classifier on top of frozen autoencoder codings.
+
+    Encodes train and test datasets, trains a Linear(n_codings, 10) model using full-batch
+    Adam optimization and Cross-Entropy loss, and returns test classification accuracy.
+    """
+    device = next(autoencoder.parameters()).device
+    was_training = autoencoder.training
+    autoencoder.eval()
+
+    # Extract latent representations without gradients
+    with torch.no_grad():
+        X_train = data["X_train"].to(device)
+        X_test = data["X_test"].to(device)
+        Ztr = autoencoder.encode(X_train)
+        Zte = autoencoder.encode(X_test)
+
+    autoencoder.train(was_training)
+
+    y_train = data["y_train"].to(device)
+    y_test = data["y_test"].to(device)
+
+    # Setup linear classifier
+    torch.manual_seed(seed)
+    n_codings = Ztr.size(1)
+    classifier = nn.Linear(n_codings, 10).to(device)
+
+    optimizer = torch.optim.Adam(classifier.parameters(), lr=lr)
+    criterion = nn.CrossEntropyLoss()
+
+    # Full-batch training on encoded features
+    classifier.train()
+    for _ in range(epochs):
+        optimizer.zero_grad()
+        logits = classifier(Ztr)
+        loss = criterion(logits, y_train)
+        loss.backward()
+        optimizer.step()
+
+    # Evaluate test accuracy
+    classifier.eval()
+    with torch.no_grad():
+        test_logits = classifier(Zte)
+        preds = test_logits.argmax(dim=1)
+        accuracy = (preds == y_test).float().mean().item()
+
+    return float(accuracy)
+
 # Step 11 - VAE
 import torch
 import torch.nn as nn
