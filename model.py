@@ -171,6 +171,42 @@ class StackedAutoencoder(nn.Module):
     def forward(self, x):
         return self.decoder(self.encoder(x))
 
+# Step 6 - TiedAutoencoder
+import math
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+
+class TiedAutoencoder(nn.Module):
+    def __init__(self, n_inputs: int = 784, hidden: int = 100, n_codings: int = 30):
+        super().__init__()
+        # Encoder weights & biases
+        self.W1 = nn.Parameter(torch.empty(hidden, n_inputs))
+        self.b1 = nn.Parameter(torch.zeros(hidden))
+        self.W2 = nn.Parameter(torch.empty(n_codings, hidden))
+        self.b2 = nn.Parameter(torch.zeros(n_codings))
+
+        # Decoder tied biases (reusing W2.T and W1.T)
+        self.b3 = nn.Parameter(torch.zeros(hidden))
+        self.b4 = nn.Parameter(torch.zeros(n_inputs))
+
+        # Initialize weights matching PyTorch's nn.Linear default
+        nn.init.kaiming_uniform_(self.W1, a=math.sqrt(5))
+        nn.init.kaiming_uniform_(self.W2, a=math.sqrt(5))
+
+    def encode(self, x: torch.Tensor) -> torch.Tensor:
+        h = F.relu(F.linear(x, self.W1, self.b1))
+        codings = F.linear(h, self.W2, self.b2)
+        return codings
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        codings = self.encode(x)
+        # Transposed weights: (codings @ W2 + b3) -> F.linear(codings, self.W2.t(), self.b3)
+        h_recon = F.relu(codings @ self.W2 + self.b3)
+        recon = torch.sigmoid(h_recon @ self.W1 + self.b4)
+        return recon
+
 # Step 11 - VAE
 import torch
 import torch.nn as nn
