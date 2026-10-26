@@ -253,6 +253,75 @@ class SparseAutoencoder(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.decoder(self.encoder(x))
 
+# Step 9 - train_sparse
+import torch
+import torch.nn.functional as F
+
+
+def train_sparse(
+    model: torch.nn.Module,
+    X: torch.Tensor,
+    weight: float = 0.1,
+    target: float = 0.1,
+    epochs: int = 5,
+    lr: float = 0.005,
+    batch_size: int = 64,
+    seed: int = 42,
+) -> list[float]:
+    """Train a SparseAutoencoder using MSE reconstruction loss plus a KL sparsity penalty.
+
+    Returns the list of per-epoch mean total losses.
+    """
+    torch.manual_seed(seed)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+
+    n_samples = X.size(0)
+    device = next(model.parameters()).device
+    epoch_losses = []
+
+    model.train()
+    for _ in range(epochs):
+        perm = torch.randperm(n_samples)
+        batch_losses = []
+
+        for start_idx in range(0, n_samples, batch_size):
+            batch_indices = perm[start_idx : start_idx + batch_size]
+            batch = X[batch_indices].to(device)
+
+            optimizer.zero_grad()
+
+            codings = model.encode(batch)
+            recon = model.decoder(codings)
+
+            recon_loss = F.mse_loss(recon, batch)
+            sparsity_loss = kl_sparsity_loss(codings, target=target)
+            total_loss = recon_loss + weight * sparsity_loss
+
+            total_loss.backward()
+            optimizer.step()
+
+            batch_losses.append(total_loss.item())
+
+        epoch_losses.append(sum(batch_losses) / len(batch_losses))
+
+    return epoch_losses
+
+
+def mean_activation(model: torch.nn.Module, X: torch.Tensor) -> float:
+    """Compute the mean activation of model.encode(X) in eval mode without gradients."""
+    was_training = model.training
+    model.eval()
+
+    device = next(model.parameters()).device
+    X_dev = X.to(device)
+
+    with torch.no_grad():
+        codings = model.encode(X_dev)
+        mean_val = codings.mean().item()
+
+    model.train(was_training)
+    return float(mean_val)
+
 # Step 11 - VAE
 import torch
 import torch.nn as nn
