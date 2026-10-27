@@ -494,6 +494,40 @@ def train_vae(
 
     return epoch_losses
 
+# Step 14 - generate_images
+import torch
+
+
+def generate_images(model: torch.nn.Module, n: int, seed: int = 0) -> torch.Tensor:
+    """Generate n synthetic images by decoding standard-normal latent vectors."""
+    was_training = model.training
+    model.eval()
+
+    torch.manual_seed(seed)
+    device = next(model.parameters()).device
+    z = torch.randn(n, model.n_codings, device=device)
+
+    with torch.no_grad():
+        images = model.decode(z)
+
+    model.train(was_training)
+    return images
+
+
+def interpolate_codings(
+    z1: torch.Tensor, z2: torch.Tensor, steps: int
+) -> torch.Tensor:
+    """Linearly interpolate from latent vector z1 to z2 in `steps` points inclusive.
+
+    Returns a tensor of shape (steps, k) where k is the latent dimension.
+    """
+    # Create interpolation coefficients t in [0, 1] shaped (steps, 1) for broadcasting
+    t = torch.linspace(0, 1, steps, device=z1.device, dtype=z1.dtype).unsqueeze(1)
+    # Ensure vectors are 1D or matched shape (1, k)
+    v1 = z1.view(1, -1)
+    v2 = z2.view(1, -1)
+    return (1.0 - t) * v1 + t * v2
+
 # Step 15 - Generator
 class Generator(nn.Module):
     def __init__(self, n_codings=30, hidden=100, n_outputs=784):

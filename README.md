@@ -23,6 +23,7 @@ python scaffold.py
 - [x] **11.** VAE
 - [x] **12.** vae_loss
 - [x] **13.** train_vae
+- [x] **14.** generate_images
 - [x] **15.** Generator
 
 ---
