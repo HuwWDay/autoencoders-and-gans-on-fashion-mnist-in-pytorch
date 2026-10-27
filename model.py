@@ -688,3 +688,24 @@ def discriminator_accuracy(
     D.train(was_training)
     return float(acc)
 
+# Step 18 - save_vae
+import torch
+
+
+def save_vae(model: torch.nn.Module, config: dict, path: str) -> None:
+    """Save the model's state_dict alongside its architecture configuration."""
+    checkpoint = {
+        "state_dict": model.state_dict(),
+        "config": config,
+    }
+    torch.save(checkpoint, path)
+
+
+def load_vae(path: str) -> torch.nn.Module:
+    """Reconstruct a VAE from saved config and weights, set to eval mode."""
+    checkpoint = torch.load(path, weights_only=False)
+    model = VAE(**checkpoint["config"])
+    model.load_state_dict(checkpoint["state_dict"])
+    model.eval()
+    return model
+
