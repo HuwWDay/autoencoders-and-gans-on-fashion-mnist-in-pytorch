@@ -548,3 +548,62 @@ class Discriminator(nn.Module):
         # TODO: logits (batch,)
         return self.net(x).squeeze(-1)
 
+# Step 16 - gan_step
+import torch
+import torch.nn.functional as F
+
+
+def gan_step(
+    G: torch.nn.Module,
+    D: torch.nn.Module,
+    real: torch.Tensor,
+    opt_g: torch.optim.Optimizer,
+    opt_d: torch.optim.Optimizer,
+) -> tuple[float, float]:
+    """Execute one training step for both Discriminator and Generator.
+
+    1. Discriminator phase: maximizes log(D(real)) + log(1 - D(G(z)))
+       Targets: real -> 1, detached fake -> 0.
+    2. Generator phase: maximizes log(D(G(z))) (non-saturating formulation)
+       Targets: fake -> 1.
+
+    Returns:
+        (d_loss, g_loss): Floating point loss values for the step.
+    """
+    batch_size = real.size(0)
+    device = real.device
+
+    # ---------------------
+    # 1. Train Discriminator
+    # ---------------------
+    opt_d.zero_grad()
+
+    z = torch.randn(batch_size, G.n_codings, device=device)
+    fake = G(z)
+
+    d_real = D(real)
+    d_fake = D(fake.detach())
+
+    # Match target shapes dynamically to D's output dimensions
+    d_real_loss = F.binary_cross_entropy_with_logits(d_real, torch.ones_like(d_real))
+    d_fake_loss = F.binary_cross_entropy_with_logits(d_fake, torch.zeros_like(d_fake))
+    d_loss = d_real_loss + d_fake_loss
+
+    d_loss.backward()
+    opt_d.step()
+
+    # -----------------
+    # 2. Train Generator
+    # -----------------
+    opt_g.zero_grad()
+
+    d_fake_for_g = D(fake)
+    g_loss = F.binary_cross_entropy_with_logits(
+        d_fake_for_g, torch.ones_like(d_fake_for_g)
+    )
+
+    g_loss.backward()
+    opt_g.step()
+
+    return float(d_loss.item()), float(g_loss.item())
+
