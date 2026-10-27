@@ -607,3 +607,84 @@ def gan_step(
 
     return float(d_loss.item()), float(g_loss.item())
 
+# Step 17 - train_gan
+import torch
+
+
+def train_gan(
+    G: torch.nn.Module,
+    D: torch.nn.Module,
+    X: torch.Tensor,
+    epochs: int = 1,
+    lr: float = 0.001,
+    batch_size: int = 32,
+    seed: int = 42,
+) -> dict[str, list[float]]:
+    """Train a GAN via alternating adversarial updates using gan_step.
+
+    Returns:
+        dict with "d_loss" and "g_loss" containing per-epoch mean loss values.
+    """
+    torch.manual_seed(seed)
+    opt_g = torch.optim.Adam(G.parameters(), lr=lr)
+    opt_d = torch.optim.Adam(D.parameters(), lr=lr)
+
+    n_samples = X.size(0)
+    device = next(D.parameters()).device
+
+    d_epoch_losses = []
+    g_epoch_losses = []
+
+    G.train()
+    D.train()
+
+    for _ in range(epochs):
+        perm = torch.randperm(n_samples)
+        batch_d_losses = []
+        batch_g_losses = []
+
+        for start_idx in range(0, n_samples, batch_size):
+            batch_indices = perm[start_idx : start_idx + batch_size]
+            real_batch = X[batch_indices].to(device)
+
+            d_loss, g_loss = gan_step(G, D, real_batch, opt_g, opt_d)
+            batch_d_losses.append(d_loss)
+            batch_g_losses.append(g_loss)
+
+        d_epoch_losses.append(sum(batch_d_losses) / len(batch_d_losses))
+        g_epoch_losses.append(sum(batch_g_losses) / len(batch_g_losses))
+
+    return {
+        "d_loss": d_epoch_losses,
+        "g_loss": g_epoch_losses,
+    }
+
+
+def discriminator_accuracy(
+    D: torch.nn.Module, real: torch.Tensor, fake: torch.Tensor
+) -> float:
+    """Compute the accuracy of the discriminator on real and fake images.
+
+    Real images are classified correctly if logit > 0.
+    Fake images are classified correctly if logit <= 0.
+    """
+    was_training = D.training
+    D.eval()
+
+    device = next(D.parameters()).device
+    real_dev = real.to(device)
+    fake_dev = fake.to(device)
+
+    with torch.no_grad():
+        out_real = D(real_dev)
+        out_fake = D(fake_dev)
+
+        correct_real = (out_real > 0).sum().item()
+        correct_fake = (out_fake <= 0).sum().item()
+
+        total = real.size(0) + fake.size(0)
+        acc = (correct_real + correct_fake) / total
+
+    D.train(was_training)
+    return float(acc)
+
